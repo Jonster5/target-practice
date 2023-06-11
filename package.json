@@ -17,5 +17,11 @@
     "tslib": "^2.5.0",
     "typescript": "^5.0.2",
     "vite": "^4.3.9"
+  },
+  "dependencies": {
+    "@fontsource-variable/trispace": "^5.0.2",
+    "@fontsource/righteous": "^5.0.2",
+    "raxis-core": "^0.2.3",
+    "sass": "^1.63.0"
   }
 }

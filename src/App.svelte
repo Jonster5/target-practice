@@ -1,47 +1,116 @@
 <script lang="ts">
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from '/vite.svg'
-  import Counter from './lib/Counter.svelte'
+	import '@fontsource/righteous';
+	import '@fontsource-variable/trispace';
+	import background from './assets/background.png';
+	import Game from './Game.svelte';
+
+	export let screen: 'title' | 'game' = 'title';
 </script>
 
-<main>
-  <div>
-    <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-      <img src={viteLogo} class="logo" alt="Vite Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank" rel="noreferrer">
-      <img src={svelteLogo} class="logo svelte" alt="Svelte Logo" />
-    </a>
-  </div>
-  <h1>Vite + Svelte</h1>
+{#if screen === 'title'}
+	<img class="background" src={background} alt="background" />
 
-  <div class="card">
-    <Counter />
-  </div>
+	<main>
+		<div class="title"><span>Target Practice</span></div>
 
-  <p>
-    Check out <a href="https://github.com/sveltejs/kit#readme" target="_blank" rel="noreferrer">SvelteKit</a>, the official Svelte app framework powered by Vite!
-  </p>
+		<div class="subtitle"><span>S P A C E</span></div>
 
-  <p class="read-the-docs">
-    Click on the Vite and Svelte logos to learn more
-  </p>
-</main>
+		<button class="play" style="grid-row: button1 / span 1" on:click={() => (screen = 'game')}
+			><span>Play</span></button
+		>
+		<button class="credits" style="grid-row: button2 / span 1"><span>Credits</span></button>
+	</main>
+{:else if screen === 'game'}
+	<Game />
+{/if}
 
-<style>
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
-  }
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
-  }
-  .logo.svelte:hover {
-    filter: drop-shadow(0 0 2em #ff3e00aa);
-  }
-  .read-the-docs {
-    color: #888;
-  }
+<style lang="scss">
+	.background {
+		position: absolute;
+		z-index: -10;
+
+		width: 277.77vh;
+		height: 100vh;
+
+		filter: brightness(50%);
+	}
+
+	main {
+		display: grid;
+
+		width: 100vw;
+		height: 100vh;
+
+		margin: 0;
+		padding: 0;
+
+		grid-template-rows: [title]20vh [subtitle]10vh 1fr [button1]8vh 4vh [button2]8vh 1fr;
+		grid-template-columns: 15vw [t1]25vw [buttons]20vw [t2]25vw 15vw;
+
+		button {
+			display: flex;
+
+			grid-column: buttons / span 1;
+
+			margin: 0;
+			padding: 0;
+
+			justify-content: center;
+			align-items: center;
+
+			border: none;
+			background: #000000bb;
+			box-shadow: 0 0 2vh 0.1vh white;
+
+			color: white;
+
+			font-family: 'trispace variable', sans-serif;
+			font-weight: 500;
+			letter-spacing: 0.5vh;
+			font-size: 2vw;
+
+			transition-duration: 100ms;
+
+			&:hover {
+				cursor: pointer;
+
+				transform: translate(0, -5px);
+				box-shadow: 0 0 4vh 0.1vh white;
+			}
+		}
+
+		.title {
+			display: flex;
+
+			grid-row: title;
+			grid-column: 2 / span 3;
+
+			justify-content: center;
+			align-items: center;
+
+			font-size: 7vw;
+			font-family: 'Righteous', sans-serif;
+			letter-spacing: 1vw;
+
+			color: #ffdc2e;
+			text-shadow: 0 0 5vh #ffdc2e;
+		}
+
+		.subtitle {
+			display: flex;
+
+			grid-row: subtitle;
+			grid-column: t1 / span 3;
+
+			justify-content: center;
+			align-items: center;
+
+			font-size: 3vw;
+			font-family: 'Trispace Variable', sans-serif;
+			font-weight: 800;
+
+			color: white;
+			text-shadow: 0 0 5vh white;
+		}
+	}
 </style>
