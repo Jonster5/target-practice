@@ -1,7 +1,7 @@
 import { ECS, type ECSPlugin } from './ecs';
 
 export class Time {
-	constructor(public elapsed: number, public delta: number, public then: number) {}
+	constructor(public elapsed: number, public delta: number, public then: number, public lostfocus: boolean = false) {}
 }
 
 function startTime(ecs: ECS) {
@@ -19,9 +19,20 @@ function updateTime(ecs: ECS) {
 	time.then = now;
 }
 
+function checkFocus(ecs: ECS) {
+	if (document.hasFocus()) {
+		return;
+	} else {
+		const time: Time = ecs.getResource(Time);
+		time.then = 0;
+
+		time.lostfocus = true;
+	}
+}
+
 export const TimePlugin: ECSPlugin = {
 	components: [],
 	startup: [startTime],
-	systems: [updateTime],
+	systems: [checkFocus, updateTime],
 	resources: [new Time(0, 0, 0)],
 };

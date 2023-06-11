@@ -22,7 +22,7 @@ export function setupLauncher(ecs: ECS) {
 
 	const launcher = ecs
 		.entity()
-		.add(new Launcher(), new Transform(new Vec2(0, 0), new Vec2(-500, 270)), new Sprite('none'), new TreeNode());
+		.add(new Launcher(), new Transform(new Vec2(0, 0), new Vec2(0, 520)), new Sprite('none'), new TreeNode());
 
 	const base = ecs
 		.entity()
@@ -82,10 +82,31 @@ export function handleLaunchSpeedVisual(ecs: ECS) {
 	visual.getComponent(Transform).pos.x = (get(pd.launchSpeed) / 50) ** 2 / 2 + 30;
 }
 
+export function changeLaunchspeed(ecs: ECS) {
+	const { keymap }: Inputs = ecs.getResource(Inputs);
+	const pd: ProjectileData = ecs.getResource(ProjectileData);
+	const gd: GameData = ecs.getResource(GameData);
+
+	if (get(gd.inFlight)) return;
+
+	if (keymap.get('w').isDown || keymap.get('ArrowUp').isDown) {
+		pd.launchSpeed.update((s) => s + 1);
+	}
+	if (keymap.get('s').isDown || keymap.get('ArrowDown').isDown) {
+		pd.launchSpeed.update((s) => s - 1);
+	}
+}
+
 export function rotateCannon(ecs: ECS) {
 	const { keymap }: Inputs = ecs.getResource(Inputs);
 	const ct: Transform = ecs.queryComponents(Transform, With(Cannon))[0];
 	const pd: ProjectileData = ecs.getResource(ProjectileData);
+	const gd: GameData = ecs.getResource(GameData);
+
+	if (get(gd.inFlight)) {
+		ct.avel = 0;
+		return;
+	}
 
 	let nvel = 0;
 

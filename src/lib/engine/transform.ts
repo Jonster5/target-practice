@@ -27,6 +27,8 @@ export class GameSettings {
 }
 
 export function updateTransform(ecs: ECS) {
+	if (!document.hasFocus()) return;
+
 	const time: Time = ecs.getResource(Time);
 	const { speed }: GameSettings = ecs.getResource(GameSettings);
 	const transforms: Transform[] = ecs.queryComponents(Transform, Without(Root));

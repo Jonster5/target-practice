@@ -13,7 +13,7 @@ export function createTarget(ecs: ECS) {
 		.entity()
 		.add(
 			new Target(),
-			new Transform(new Vec2(15, 50), new Vec2(200, 300)),
+			new Transform(new Vec2(15, 50), new Vec2(0, -525)),
 			new Sprite('rectangle', 'red'),
 			new TreeNode()
 		);

@@ -371,8 +371,6 @@ export class ECS {
 	}
 
 	update() {
-		if (!document.hasFocus()) return;
-
 		for (let i = 0; i < this.systems.length; i++) {
 			if (!this.systems[i].enabled) continue;
 

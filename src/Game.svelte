@@ -4,22 +4,24 @@
 	import { GraphicsPlugin, GraphicsSettings } from './lib/engine/graphics';
 	import { onDestroy, onMount } from 'svelte';
 	import { Planet, makePlanet } from './lib/planet';
-	import {
-		Projectile,
-		ProjectileData,
-		calculateGravity,
-		changeLaunchspeed,
-		launchProjectile,
-	} from './lib/projectile';
+	import { Projectile, ProjectileData, calculateGravity, launchProjectile } from './lib/projectile';
 	import { InputPlugin, Inputs, KeysToTrack } from './lib/engine/input';
 	import { Trail, TrailTracker, destroyTrail, spawnTrail } from './lib/trail';
-	import { Cannon, Launcher, handleLaunchSpeedVisual, rotateCannon, setupLauncher } from './lib/launcher';
+	import {
+		Cannon,
+		Launcher,
+		changeLaunchspeed,
+		handleLaunchSpeedVisual,
+		rotateCannon,
+		setupLauncher,
+	} from './lib/launcher';
 	import { updateTransform } from './lib/engine/transform';
 	import { get, writable } from 'svelte/store';
 	import { GameData, checkForReset } from './lib/utils';
 	import { fly } from 'svelte/transition';
 	import { backOut } from 'svelte/easing';
 	import { Target, createTarget } from './lib/target';
+	import { projectilePlanetCollisions, projectileTargetCollisions } from './lib/collisions';
 
 	let target: HTMLElement;
 
@@ -27,6 +29,7 @@
 	const angle = writable(0);
 	const reset = writable(false);
 	const inFlight = writable(false);
+	const win = writable(false);
 
 	const ecs = new ECS()
 		.insertPlugin(TimePlugin)
@@ -34,7 +37,7 @@
 		.insertPlugin(InputPlugin)
 		.insertResource(new KeysToTrack(['w', 'a', 's', 'd', ' ', 'ArrowUp', 'ArrowDown', 'ArrowRight', 'ArrowLeft']))
 		.insertResource(new ProjectileData(speed, angle))
-		.insertResource(new GameData(reset, inFlight))
+		.insertResource(new GameData(reset, inFlight, win))
 		.insertResource(new TrailTracker())
 		.registerComponentTypes(Planet, Projectile, Trail, Launcher, Cannon, Target)
 		.registerStartupSystems(makePlanet, setupLauncher, createTarget)
@@ -46,7 +49,9 @@
 			changeLaunchspeed,
 			checkForReset,
 			destroyTrail,
-			launchProjectile
+			launchProjectile,
+			projectilePlanetCollisions,
+			projectileTargetCollisions
 		);
 
 	onMount(() => {
@@ -68,7 +73,6 @@
 <div class="ctarget" bind:this={target} />
 
 <main>
-	<div class="velocity">{$speed}</div>
 	{#if $inFlight}
 		<div
 			class="retry"
@@ -78,6 +82,12 @@
 		>
 			<span>RESET</span>
 		</div>
+	{:else}
+		<div class="velocity">{$speed}<span class="unit">m/s</span></div>
+	{/if}
+
+	{#if $win}
+		<div class="victory">Level Complete!</div>
 	{/if}
 </main>
 
@@ -97,13 +107,18 @@
 
 		grid-template-rows: 10vh 1fr 20vh;
 		grid-template-columns: 5vw 1fr 15vw 1fr 5vw;
+
+		.unit {
+			color: cornflowerblue;
+			font-weight: 800;
+		}
 	}
 
 	.velocity {
 		color: white;
 
 		font-family: 'Trispace Variable', sans-serif;
-		font-weight: 800;
+		font-weight: 600;
 		font-size: 2vw;
 	}
 

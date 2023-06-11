@@ -38,25 +38,13 @@ export function launchProjectile(ecs: ECS) {
 				0,
 				new Vec2(get(pd.launchSpeed), 0).setAngle(get(pd.launchAngle))
 			),
-			new Sprite('ellipse', 'ellipse'),
+			new Sprite('ellipse', 'pink'),
 			new TreeNode()
 		);
 
 	addChild(root, proj);
 
 	pd.tblaunched = false;
-}
-
-export function changeLaunchspeed(ecs: ECS) {
-	const { keymap }: Inputs = ecs.getResource(Inputs);
-	const pd: ProjectileData = ecs.getResource(ProjectileData);
-
-	if (keymap.get('w').isDown || keymap.get('ArrowUp').isDown) {
-		pd.launchSpeed.update((s) => s + 1);
-	}
-	if (keymap.get('s').isDown || keymap.get('ArrowDown').isDown) {
-		pd.launchSpeed.update((s) => s - 1);
-	}
 }
 
 export function calculateGravity(ecs: ECS) {

@@ -7,7 +7,7 @@ import { Trail, TrailTracker } from './trail';
 import { Transform } from './engine/transform';
 
 export class GameData {
-	constructor(public reset: Writable<boolean>, public inFlight: Writable<boolean>) {}
+	constructor(public reset: Writable<boolean>, public inFlight: Writable<boolean>, public win: Writable<boolean>) {}
 }
 
 export function checkForReset(ecs: ECS) {

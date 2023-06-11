@@ -14,22 +14,13 @@ export function makePlanet(ecs: ECS) {
 	const p1 = ecs
 		.entity()
 		.add(
-			new Planet(1e7),
-			new Transform(new Vec2(500, 500), new Vec2(-500, 0), 0, new Vec2(0, 0)),
+			new Planet(5e7),
+			new Transform(new Vec2(1000, 1000), new Vec2(0, 0), 0, new Vec2(0, 0)),
 			new Sprite('ellipse', 'lightblue'),
 			new TreeNode()
 		);
 
-	const p2 = ecs
-		.entity()
-		.add(
-			new Planet(1e6),
-			new Transform(new Vec2(100, 100), new Vec2(500, 200)),
-			new Sprite('ellipse', 'skyblue'),
-			new TreeNode()
-		);
-
-	addChildren(root, p1, p2);
+	addChildren(root, p1);
 }
 
 export const G: number = 6.6743;
