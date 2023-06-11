@@ -3,11 +3,13 @@
 	import '@fontsource-variable/trispace';
 	import background from './assets/background.png';
 	import Game from './Game.svelte';
+	import { writable, type Writable } from 'svelte/store';
+	import { type Screen } from './uiTypes';
 
-	export let screen: 'title' | 'game' = 'title';
+	export let screen: Writable<Screen> = writable('title');
 </script>
 
-{#if screen === 'title'}
+{#if $screen === 'title'}
 	<img class="background" src={background} alt="background" />
 
 	<main>
@@ -15,13 +17,13 @@
 
 		<div class="subtitle"><span>S P A C E</span></div>
 
-		<button class="play" style="grid-row: button1 / span 1" on:click={() => (screen = 'game')}
+		<button class="play" style="grid-row: button1 / span 1" on:click={() => ($screen = 'game')}
 			><span>Play</span></button
 		>
 		<button class="credits" style="grid-row: button2 / span 1"><span>Credits</span></button>
 	</main>
-{:else if screen === 'game'}
-	<Game />
+{:else if $screen === 'game'}
+	<Game {screen} />
 {/if}
 
 <style lang="scss">

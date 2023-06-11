@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { With, type ECS } from './engine/ecs';
 import { GameData } from './utils';
-import { Transform } from './engine/transform';
+import { GameSettings, Transform } from './engine/transform';
 import { Projectile } from './projectile';
 import { Planet } from './planet';
 import { Vec2 } from 'raxis-core';
@@ -9,6 +9,7 @@ import { Target } from './target';
 
 export function projectileTargetCollisions(ecs: ECS) {
 	const gd: GameData = ecs.getResource(GameData);
+	const gs: GameSettings = ecs.getResource(GameSettings);
 
 	if (!get(gd.inFlight)) return;
 
@@ -37,13 +38,15 @@ export function projectileTargetCollisions(ecs: ECS) {
 	const distanceSquared = distanceX * distanceX + distanceY * distanceY;
 
 	if (distanceSquared < rad * rad) {
+		proj.vel.mulScalar(0.9);
+
 		gd.win.set(true);
-		console.log('win');
 	}
 }
 
 export function projectilePlanetCollisions(ecs: ECS) {
 	const gd: GameData = ecs.getResource(GameData);
+	const gs: GameSettings = ecs.getResource(GameSettings);
 
 	if (!get(gd.inFlight)) return;
 
