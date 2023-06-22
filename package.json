@@ -1,27 +1,28 @@
 {
-  "name": "target-practice",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
-  },
-  "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^2.0.4",
-    "@tsconfig/svelte": "^4.0.1",
-    "svelte": "^3.58.0",
-    "svelte-check": "^3.3.1",
-    "tslib": "^2.5.0",
-    "typescript": "^5.0.2",
-    "vite": "^4.3.9"
-  },
-  "dependencies": {
-    "@fontsource-variable/trispace": "^5.0.2",
-    "@fontsource/righteous": "^5.0.2",
-    "raxis-core": "^0.2.3",
-    "sass": "^1.63.0"
-  }
+	"name": "target-practice",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"deploy": "yarn build & firebase deploy",
+		"preview": "vite preview",
+		"check": "svelte-check --tsconfig ./tsconfig.json"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^2.0.4",
+		"@tsconfig/svelte": "^4.0.1",
+		"svelte": "^3.58.0",
+		"svelte-check": "^3.3.1",
+		"tslib": "^2.5.0",
+		"typescript": "^5.0.2",
+		"vite": "^4.3.9"
+	},
+	"dependencies": {
+		"@fontsource-variable/trispace": "^5.0.2",
+		"@fontsource/righteous": "^5.0.2",
+		"number-allocator": "^1.0.14",
+		"sass": "^1.63.0"
+	}
 }

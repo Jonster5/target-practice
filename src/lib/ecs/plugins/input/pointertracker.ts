@@ -1,42 +1,4 @@
-import { Vec2 } from 'raxis-core';
-import type { ECS, ECSPlugin } from './ecs';
-
-export class Inputs {
-	constructor(
-		public keymap: Map<string, KeyTracker> = new Map(),
-		public pointer: PointerTracker = new PointerTracker()
-	) {}
-}
-
-export class KeysToTrack {
-	constructor(public keys: string[]) {}
-}
-
-function setupKeyTrackers(ecs: ECS) {
-	const ktt: KeysToTrack = ecs.getResource(KeysToTrack);
-	if (!ktt) return;
-
-	const { keys } = ktt;
-	const { keymap }: Inputs = ecs.getResource(Inputs);
-
-	keys.forEach((key) => {
-		if (key.length === 1) {
-			keymap.set(key.toLowerCase(), new KeyTracker(key.toLowerCase(), key.toUpperCase()));
-		} else {
-			keymap.set(key, new KeyTracker(key));
-		}
-	});
-}
-
-function destroyKeyTrackers(ecs: ECS) {
-	const { keymap }: Inputs = ecs.getResource(Inputs);
-
-	if (keymap.size === 0) return;
-
-	for (let [k, tracker] of keymap) {
-		tracker.destroy();
-	}
-}
+import { Vec2 } from '../../math/vec2';
 
 export class PointerTracker {
 	leftIsDown: boolean;
@@ -49,6 +11,8 @@ export class PointerTracker {
 	pos: Vec2;
 	last: Vec2;
 
+	offset: Vec2;
+
 	private oldc: () => void;
 	private oluc: () => void;
 	private ordc: () => void;
@@ -57,9 +21,9 @@ export class PointerTracker {
 	private omuc: () => void;
 	private osc: (amount: number) => void;
 
-	private md: () => void;
-	private mu: () => void;
-	private mm: () => void;
+	private md: (e: MouseEvent) => void;
+	private mu: (e: MouseEvent) => void;
+	private mm: (e: MouseEvent) => void;
 
 	constructor() {
 		this.leftIsDown = false;
@@ -71,6 +35,7 @@ export class PointerTracker {
 
 		this.pos = new Vec2(0, 0);
 		this.last = new Vec2(0, 0);
+		this.offset = new Vec2(0, 0);
 
 		this.md = this.onMouseDown.bind(this);
 		this.mu = this.onMouseUp.bind(this);
@@ -133,7 +98,6 @@ export class PointerTracker {
 		const { clientX, clientY, movementX, movementY } = e;
 
 		this.pos.set(clientX, clientY);
-		this.last.set(movementX, movementY);
 	}
 
 	onLeftDown(cb: () => void, thisArg?: any) {
@@ -164,65 +128,3 @@ export class PointerTracker {
 		this.osc = cb.bind(thisArg ?? cb);
 	}
 }
-
-export class KeyTracker {
-	keys: string[];
-
-	isDown: boolean;
-	isUp: boolean;
-
-	private okd: () => void;
-	private oku: () => void;
-
-	private kdb: () => void;
-	private kub: () => void;
-
-	constructor(...keys: string[]) {
-		this.keys = keys;
-
-		this.isDown = false;
-		this.isUp = true;
-
-		this.kdb = this.kd.bind(this);
-		this.kub = this.ku.bind(this);
-
-		window.addEventListener('keydown', this.kdb);
-		window.addEventListener('keyup', this.kub);
-	}
-
-	destroy() {
-		window.removeEventListener('keydown', this.kdb);
-		window.removeEventListener('keyup', this.kub);
-	}
-
-	private kd(e: KeyboardEvent) {
-		if (this.keys.indexOf(e.key) !== -1) {
-			this.isDown = true;
-			this.isUp = false;
-			if (this.okd) this.okd();
-		}
-	}
-	private ku(e: KeyboardEvent) {
-		if (this.keys.indexOf(e.key) !== -1) {
-			this.isDown = false;
-			this.isUp = true;
-
-			if (this.oku) this.oku();
-		}
-	}
-
-	onKeyDown(cb: () => void, thisArg?: any) {
-		this.okd = cb.bind(thisArg ?? cb);
-	}
-
-	onKeyUp(cb: () => void, thisArg?: any) {
-		this.oku = cb.bind(thisArg ?? cb);
-	}
-}
-
-export const InputPlugin: ECSPlugin = {
-	startup: [setupKeyTrackers],
-	systems: [],
-	shutdown: [destroyKeyTrackers],
-	resources: [new Inputs()],
-};

@@ -1,71 +1,87 @@
-import { Vec2 } from 'raxis-core';
-import { ECS, With } from './engine/ecs';
-import { Root, Sprite } from './engine/graphics';
-import { Transform, GameSettings } from './engine/transform';
-import { TreeNode, addChild, removeChild } from './engine/treenode';
+import { Component, ECS, ECSEvent, With } from './ecs/engine';
+import { Vec2 } from './ecs/math';
+import { Root, Sprite } from './ecs/plugins/graphics';
+import { Time, TimeData } from './ecs/plugins/time';
+import { Transform } from './ecs/plugins/transform';
+import { TreeNode, addChild, removeChild } from './ecs/plugins/treenode';
 import { Projectile } from './projectile';
-import { Time } from './engine/time';
 
-export class Trail {}
+export class Trail extends Component {}
 
-export class TrailTracker {
-	constructor(
-		public ready: boolean = true,
-		public last: Vec2 = undefined,
-		public tbdestroyed: boolean = false,
-		public time: number = 0
-	) {}
+export class TrailTracker extends Component {
+	constructor(public ready: boolean = true, public last: Vec2 = undefined, public time: number = 0) {
+		super();
+	}
+}
+
+export class NextTrailReadyEvent extends ECSEvent {
+	constructor(public last: Vec2) {
+		super();
+	}
+
+	clone(): ECSEvent {
+		return new NextTrailReadyEvent(this.last.clone());
+	}
+}
+
+export class DestroyTrailEvent extends ECSEvent {}
+
+export class TrailTime extends Component {
+	constructor(public elapsed: number) {
+		super();
+	}
 }
 
 export function spawnTrail(ecs: ECS) {
-	if (!document.hasFocus()) return;
-
-	const tracker: TrailTracker = ecs.getResource(TrailTracker);
+	const nextTrailReady = ecs.getEventWriter(NextTrailReadyEvent);
+	const ready = ecs.getEventReader(NextTrailReadyEvent);
 	const projectileQuery = ecs.queryEntities(With(Projectile))[0];
-	const time: Time = ecs.getResource(Time);
-	const { speed }: GameSettings = ecs.getResource(GameSettings);
+	if (!projectileQuery) return;
 
-	tracker.time += time.delta;
+	if (!ready.available()) return;
 
-	if (!tracker.ready || !projectileQuery || tracker.time < 100 / speed) return;
+	const { speed } = ecs.getResource(TimeData);
 
-	tracker.time = 0;
+	const proj = ecs.entity(projectileQuery);
+	const { pos, size, vel }: Transform = proj.get(Transform);
+	const { last } = ready.get();
 
-	const root = ecs.controls(ecs.queryEntities(With(Root))[0]);
-	const proj = ecs.controls(projectileQuery);
-	const { pos } = proj.getComponent(Transform);
+	const root = ecs.entity(ecs.queryEntities(With(Root))[0]);
 
-	if (!tracker.last) tracker.last = pos.clone();
+	const length = last.distanceTo(pos);
+	const mid = last.clone().add(pos).div(2);
+	const angle = pos.clone().sub(last).angle();
 
-	const length = tracker.last.distanceTo(pos);
-	const mid = tracker.last.clone().add(pos).divScalar(2);
-	const angle = pos.clone().sub(tracker.last).angle();
-
-	const dot = ecs
-		.entity()
-		.add(new Trail(), new Transform(new Vec2(5, 5), pos.clone()), new Sprite('ellipse', '#eeddff'), new TreeNode());
-
-	tracker.last = pos.clone();
+	const dot = ecs.spawn(
+		new Trail(),
+		new Transform(new Vec2(length + 0.1, 3), mid, angle),
+		new Sprite('rectangle', '#eeddff'),
+		new TreeNode()
+	);
 
 	addChild(root, dot);
 	removeChild(root, proj);
 	addChild(root, proj);
+
+	setTimeout(
+		(p: Vec2) => nextTrailReady.send(new NextTrailReadyEvent(p)),
+		(size.x / 2 / vel.mag() / speed) * 1000,
+		pos.clone()
+	);
 }
 
 export function destroyTrail(ecs: ECS) {
-	const tt: TrailTracker = ecs.getResource(TrailTracker);
-	const root = ecs.controls(ecs.queryEntities(With(Root))[0]);
+	const root = ecs.entity(ecs.queryEntities(With(Root))[0]);
+	const dte = ecs.getEventReader(DestroyTrailEvent);
 
-	if (!tt.tbdestroyed) return;
+	if (!dte.available()) return;
 
 	const trail = ecs.queryEntities(With(Trail));
 
 	if (trail.length === 0) return;
 
 	trail.forEach((e) => {
-		removeChild(root, ecs.controls(e));
+		removeChild(root, ecs.entity(e));
 		ecs.destroy(e);
 	});
-
-	tt.tbdestroyed = false;
 }

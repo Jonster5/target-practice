@@ -1,69 +1,95 @@
-import { Vec2 } from 'raxis-core';
-import { With, type ECS } from './engine/ecs';
-import { Root, Sprite } from './engine/graphics';
-import { GameSettings, Transform } from './engine/transform';
-import { TreeNode, addChild, removeChild } from './engine/treenode';
-import { G, Planet, getGAcc } from './planet';
-import { Time } from './engine/time';
-import { Inputs } from './engine/input';
 import { get, type Writable } from 'svelte/store';
 import { Cannon, Launcher } from './launcher';
+import { UIData } from './ui';
+import { Component, ECS, ECSEvent, With } from './ecs/engine';
+import { Vec2 } from './ecs/math';
+import { Root, Sprite, startImageAnimation } from './ecs/plugins/graphics';
+import { Time, TimeData } from './ecs/plugins/time';
+import { Transform } from './ecs/plugins/transform';
+import { TreeNode, addChild } from './ecs/plugins/treenode';
+import { Planet, getGAcc } from './planet';
 
-export class Projectile {
-	constructor(public mass: number) {}
+export class Projectile extends Component {
+	constructor(public mass: number) {
+		super();
+	}
 }
 
-export class ProjectileData {
-	constructor(
-		public launchSpeed: Writable<number>,
-		public launchAngle: Writable<number>,
-		public tblaunched: boolean = false
-	) {}
+export class LaunchEvent extends ECSEvent {
+	constructor(public launchSpeed: number, public launchAngle: number) {
+		super();
+	}
 }
 
 export function launchProjectile(ecs: ECS) {
-	const root = ecs.controls(ecs.queryEntities(With(Root))[0]);
+	const launch = ecs.getEventReader(LaunchEvent);
+
+	if (!launch.available()) return;
+
+	const root = ecs.entity(ecs.queryEntities(With(Root))[0]);
 	const { pos }: Transform = ecs.queryComponents(Transform, With(Launcher))[0];
-	const pd: ProjectileData = ecs.getResource(ProjectileData);
+	const { inFlight }: UIData = ecs.getResource(UIData);
 
-	if (!pd.tblaunched) return;
+	const pig1 = new Image(250, 250);
+	pig1.src = './pig1.png';
 
-	const proj = ecs
-		.entity()
-		.add(
-			new Projectile(1),
-			new Transform(
-				new Vec2(30, 30),
-				pos.clone().add(new Vec2(0, 20)),
-				0,
-				new Vec2(get(pd.launchSpeed), 0).setAngle(get(pd.launchAngle))
-			),
-			new Sprite('ellipse', 'pink'),
-			new TreeNode()
-		);
+	const pig2 = new Image(250, 250);
+	pig2.src = './pig2.png';
+
+	const pig3 = new Image(250, 250);
+	pig3.src = './pig3.png';
+
+	const pig4 = new Image(250, 250);
+	pig4.src = './pig4.png';
+
+	const pig5 = new Image(250, 250);
+	pig5.src = './pig5.png';
+
+	const pig6 = new Image(250, 250);
+	pig6.src = './pig6.png';
+
+	const projsprite = new Sprite('image', [pig1, pig2, pig3, pig4, pig5, pig6, pig5, pig4, pig3, pig2]);
+
+	const { launchAngle, launchSpeed } = launch.get();
+
+	const proj = ecs.spawn(
+		new Projectile(1),
+		new Transform(
+			new Vec2(30, 30),
+			pos.clone().add(new Vec2(0, 20)),
+			0,
+			new Vec2(launchSpeed, 0).setAngle(launchAngle)
+		),
+		projsprite,
+		new TreeNode()
+	);
 
 	addChild(root, proj);
 
-	pd.tblaunched = false;
+	startImageAnimation(projsprite, 500);
+
+	inFlight.set(true);
 }
 
 export function calculateGravity(ecs: ECS) {
-	if (!document.hasFocus()) return;
+	const pq = ecs.queryComponents(Projectile);
+	const tq = ecs.queryComponents(Transform, With(Projectile));
 
-	const projectileQuery: [Projectile, Transform][] = ecs.queryComponents([Projectile, Transform]);
+	if (!pq.length) return;
 
-	if (!projectileQuery.length) return;
+	const planets = ecs.queryEntities(With(Planet), With(Transform));
+	const { mass } = pq[0],
+		t = tq[0];
 
-	const planets: [Planet, Transform][] = ecs.queryComponents([Planet, Transform]);
-	const [{ mass }, t]: [Projectile, Transform] = projectileQuery[0];
 	const time = ecs.getResource(Time);
-	const { speed }: GameSettings = ecs.getResource(GameSettings);
+	const { speed } = ecs.getResource(TimeData);
 
-	const forces = planets.map(([{ mass: m1 }, p1]) => getGAcc(m1, p1, t));
+	const forces = planets.map((p) => ecs.entity(p)).map((p) => getGAcc(p.get(Planet).mass, p.get(Transform), t));
 
 	const fnet = forces.reduce((a, b) => a.add(b), new Vec2(0, 0));
 
-	const acc = fnet.divScalar(mass);
+	const acc = fnet.div(mass);
 
-	t.vel.add(acc.mulScalar((time.delta * speed) / 1000));
+	t.vel.add(acc.mul((time.delta * speed) / 1000));
+	t.angle = fnet.angle() + Math.PI / 2;
 }

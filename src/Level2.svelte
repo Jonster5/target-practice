@@ -1,28 +1,38 @@
 <script lang="ts">
-	import { ECS } from './lib/engine/ecs';
-	import { TimePlugin } from './lib/engine/time';
-	import { GraphicsPlugin, GraphicsSettings } from './lib/engine/graphics';
-	import { onDestroy, onMount } from 'svelte';
-	import { Planet, makePlanet } from './lib/planet';
-	import { Projectile, ProjectileData, calculateGravity, launchProjectile } from './lib/projectile';
-	import { InputPlugin, Inputs, KeysToTrack } from './lib/engine/input';
-	import { Trail, TrailTracker, destroyTrail, spawnTrail } from './lib/trail';
+	import { Planet, makePlanetlvl1, makePlanetlvl2 } from './lib/planet';
+	import { LaunchEvent, Projectile, calculateGravity, launchProjectile } from './lib/projectile';
+	import { DestroyTrailEvent, NextTrailReadyEvent, Trail, TrailTracker, destroyTrail, spawnTrail } from './lib/trail';
 	import {
 		Cannon,
 		Launcher,
 		changeLaunchspeed,
 		handleLaunchSpeedVisual,
 		rotateCannon,
-		setupLauncher,
+		setupLaunchAction,
+		setupLauncherlvl1,
+		setupLauncherlvl2,
 	} from './lib/launcher';
-	import { GameSettings, updateTransform } from './lib/engine/transform';
 	import { get, writable, type Writable } from 'svelte/store';
-	import { GameData, checkForReset } from './lib/utils';
+	import {
+		ResetEvent,
+		SetSpeedEvent,
+		UIData,
+		checkForReset,
+		followProjectileAfterAnimation,
+		setupTweenableEntities,
+	} from './lib/ui';
 	import { fly } from 'svelte/transition';
 	import { backOut, cubicOut, expoInOut } from 'svelte/easing';
-	import { Target, createTarget } from './lib/target';
+	import { Target, createTargetlvl1, createTargetlvl2 } from './lib/target';
 	import { projectilePlanetCollisions, projectileTargetCollisions } from './lib/collisions';
 	import { type Screen } from './uiTypes';
+	import level1bg from './assets/level2bg.png';
+	import { onMount, onDestroy } from 'svelte';
+	import { ECS, EventWriter } from './lib/ecs/engine';
+	import { TimePlugin, GraphicsPlugin, InputPlugin, defaultPlugins } from './lib/ecs/plugins';
+	import { CanvasSettings } from './lib/ecs/plugins/graphics';
+	import { KeysToTrack } from './lib/ecs/plugins/input';
+	import { TimeData } from './lib/ecs/plugins/time';
 
 	export let screen: Writable<Screen>;
 
@@ -30,26 +40,32 @@
 
 	const speed = writable(500);
 	const angle = writable(0);
-	const reset = writable(false);
 	const inFlight = writable(false);
 	const win = writable(false);
 	const gspeed = writable(0);
 
+	let reset: EventWriter<ResetEvent>;
+	let setSpeed: EventWriter<SetSpeedEvent>;
+	let speedInput: HTMLInputElement;
+
 	const gspeedsteps = [1, 2, 5];
 
 	const ecs = new ECS()
-		.insertPlugin(TimePlugin)
-		.insertPlugin(GraphicsPlugin)
-		.insertPlugin(InputPlugin)
+		.insertPlugins(...defaultPlugins)
 		.insertResource(new KeysToTrack(['w', 'a', 's', 'd', ' ', 'ArrowUp', 'ArrowDown', 'ArrowRight', 'ArrowLeft']))
-		.insertResource(new ProjectileData(speed, angle))
-		.insertResource(new GameData(reset, inFlight, win))
-		.insertResource(new TrailTracker())
-		.registerComponentTypes(Planet, Projectile, Trail, Launcher, Cannon, Target)
-		.registerStartupSystems(makePlanet, setupLauncher, createTarget)
-		.registerSystems(
+		.insertResource(new UIData(inFlight, win, speed, angle))
+		.addEventTypes(DestroyTrailEvent, LaunchEvent, ResetEvent, SetSpeedEvent, NextTrailReadyEvent)
+		.addComponentTypes(Planet, Projectile, Trail, Launcher, Cannon, Target)
+		.addStartupSystems(
+			makePlanetlvl2,
+			setupLauncherlvl2,
+			createTargetlvl2,
+			setupLaunchAction,
+			setupTweenableEntities
+		)
+		.addMainSystems(
 			calculateGravity,
-			// spawnTrail,
+			spawnTrail,
 			handleLaunchSpeedVisual,
 			rotateCannon,
 			changeLaunchspeed,
@@ -57,16 +73,17 @@
 			destroyTrail,
 			launchProjectile,
 			projectilePlanetCollisions,
-			projectileTargetCollisions
+			projectileTargetCollisions,
+			followProjectileAfterAnimation
 		);
 
 	const us = speed.subscribe((s) => {
-		if (s > 999) speed.set(999);
+		if (s > 1000) speed.set(1000);
 		if (s < 100) speed.set(100);
 	});
 
 	const ugs = gspeed.subscribe((s) => {
-		const settings: GameSettings = ecs.getResource(GameSettings);
+		const settings: TimeData = ecs.getResource(TimeData);
 
 		if (s < 0) gspeed.set(0);
 		if (s >= gspeedsteps.length) gspeed.set(gspeedsteps.length - 1);
@@ -74,13 +91,20 @@
 		settings.speed = gspeedsteps[s];
 	});
 
+	const uw = win.subscribe((w) => {
+		if (w) localStorage.setItem('c2', 'true');
+	});
+
 	onMount(() => {
 		ecs.insertResource(
-			new GraphicsSettings({
+			new CanvasSettings({
 				target,
 				width: 5000,
 			})
 		).run();
+
+		reset = ecs.getEventWriter(ResetEvent);
+		setSpeed = ecs.getEventWriter(SetSpeedEvent);
 	});
 
 	onDestroy(() => {
@@ -88,23 +112,24 @@
 
 		us();
 		ugs();
+		uw();
 	});
 </script>
 
-<div class="ctarget" bind:this={target} style={$win ? `opacity: 0.5;` : `opacity: 1;`} />
+<div class="ctarget" bind:this={target} style={`opacity: ${$win ? 0.5 : 1};`} />
 
-<main>
+<main style={`background-image: url(${level1bg});`}>
 	{#if !$win}
-		<div class="time-control" transition:fly={{ y: -200, delay: 0, duration: 1000, easing: backOut }}>
+		<!-- <div class="time-control" transition:fly={{ y: -200, delay: 0, duration: 1000, easing: backOut }}>
 			<button on:click={() => gspeed.update((s) => s - 1)}>&lt;</button>
 			<span>{gspeedsteps[$gspeed]}<strong>x</strong></span>
 			<button on:click={() => gspeed.update((s) => s + 1)}>&gt;</button>
-		</div>
+		</div> -->
 		{#if $inFlight}
 			<div
 				class="retry"
-				on:click={() => reset.set(true)}
-				on:keypress={() => reset.set(true)}
+				on:click={() => reset.send()}
+				on:keypress={() => reset.send()}
 				transition:fly={{ y: -200, delay: 0, duration: 1000, easing: backOut }}
 			>
 				<span>RESET</span>
@@ -112,7 +137,7 @@
 		{:else}
 			<div class="velocity" transition:fly={{ y: 200, duration: 500, easing: cubicOut }}>
 				<span>{$speed}<strong>m/s</strong></span>
-				<input type="range" min="100" max="999" bind:value={$speed} />
+				<input type="range" min="100" max="1000" bind:value={$speed} />
 			</div>
 		{/if}
 	{:else}
@@ -120,7 +145,8 @@
 			<span class="title">Level Complete!</span>
 			<div>
 				<button on:click={() => screen.set('title')}><span>Home</span></button>
-				<button><span>Next</span></button>
+				<button on:click={() => screen.set('select')}><span>Level Select</span></button>
+				<button on:click={() => screen.set('level3')}><span>Next</span></button>
 			</div>
 		</div>
 	{/if}
@@ -144,6 +170,10 @@
 
 		grid-template-rows: 10vh 1fr 20vh;
 		grid-template-columns: 10vw 1fr 15vw 1fr 10vw;
+
+		background-size: cover;
+		background-repeat: no-repeat;
+		background-position: center;
 
 		strong {
 			color: cornflowerblue;
@@ -176,7 +206,7 @@
 		div {
 			display: flex;
 
-			width: 50%;
+			width: 70%;
 
 			justify-content: space-evenly;
 			align-items: center;
@@ -202,7 +232,7 @@
 				font-family: 'trispace variable', sans-serif;
 				font-weight: 500;
 				letter-spacing: 0.5vh;
-				font-size: 2vw;
+				font-size: 1.7vw;
 
 				transition-duration: 100ms;
 
@@ -213,53 +243,6 @@
 					box-shadow: 0 0 4vh 0.1vh white;
 				}
 			}
-		}
-	}
-
-	.time-control {
-		display: flex;
-
-		width: 80%;
-		height: 50%;
-
-		margin: 1vh auto;
-		padding: 1vh;
-		box-sizing: border-box;
-
-		z-index: 20;
-
-		grid-row: 1 / 1;
-		grid-column: 5 / 5;
-
-		justify-content: space-between;
-		align-items: center;
-
-		border: none;
-		background: #000000bb;
-		box-shadow: 0 0 2vh 0.1vh white;
-
-		button {
-			font-size: 1vw;
-			font-family: 'righteous';
-
-			background: none;
-			border: none;
-			outline: none;
-
-			opacity: 0.7;
-			transition: opacity 0.1s;
-
-			&:hover {
-				opacity: 1;
-				cursor: pointer;
-			}
-		}
-
-		span {
-			color: white;
-			font-size: 1vw;
-			font-family: 'Trispace Variable', sans-serif;
-			font-weight: 600;
 		}
 	}
 

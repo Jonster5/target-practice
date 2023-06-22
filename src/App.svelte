@@ -2,9 +2,13 @@
 	import '@fontsource/righteous';
 	import '@fontsource-variable/trispace';
 	import background from './assets/background.png';
-	import Game from './Game.svelte';
+	import Level1 from './Level1.svelte';
 	import { writable, type Writable } from 'svelte/store';
 	import { type Screen } from './uiTypes';
+	import Level2 from './Level2.svelte';
+	import Level3 from './Level3.svelte';
+	import LevelSelect from './LevelSelect.svelte';
+	import Credits from './Credits.svelte';
 
 	export let screen: Writable<Screen> = writable('title');
 </script>
@@ -17,13 +21,26 @@
 
 		<div class="subtitle"><span>S P A C E</span></div>
 
-		<button class="play" style="grid-row: button1 / span 1" on:click={() => ($screen = 'game')}
+		<button class="play" style="grid-row: button1 / span 1" on:click={() => ($screen = 'level1')}
 			><span>Play</span></button
 		>
-		<button class="credits" style="grid-row: button2 / span 1"><span>Credits</span></button>
+		<button class="select" style="grid-row: button2 / span 1" on:click={() => ($screen = 'select')}
+			><span>Level Select</span></button
+		>
+		<button class="credits" style="grid-row: button3 / span 1" on:click={() => ($screen = 'credits')}
+			><span>Credits</span></button
+		>
 	</main>
-{:else if $screen === 'game'}
-	<Game {screen} />
+{:else if $screen === 'select'}
+	<LevelSelect {screen} />
+{:else if $screen === 'credits'}
+	<Credits {screen} />
+{:else if $screen === 'level1'}
+	<Level1 {screen} />
+{:else if $screen === 'level2'}
+	<Level2 {screen} />
+{:else if $screen === 'level3'}
+	<Level3 {screen} />
 {/if}
 
 <style lang="scss">
@@ -46,7 +63,7 @@
 		margin: 0;
 		padding: 0;
 
-		grid-template-rows: [title]20vh [subtitle]10vh 1fr [button1]8vh 4vh [button2]8vh 1fr;
+		grid-template-rows: [title]20vh [subtitle]10vh 1fr [button1]8vh 4vh [button2]8vh 4vh [button3]8vh 1fr;
 		grid-template-columns: 15vw [t1]25vw [buttons]20vw [t2]25vw 15vw;
 
 		button {
